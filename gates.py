@@ -1,69 +1,76 @@
-# representation of https://www.allaboutcircuits.com/textbook/digital/chpt-7/circuit-simplification-examples/
+from abc import ABC, abstractmethod
 
-# TODO: should operations be made binary?
+class Node(ABC):
+    def __init__(self, children):
+        self.children = children
 
-circuit = {
-    "op": "+", "operands": [
-        { "op": "*", "operands": [ "a", "b" ] },
-        {
-            "op": "*", "operands": [
-                "b",
-                "c",
-                { "op": "+", "operands": [ "b", "c" ] }
-            ]
-        }
-    ]
-}
+    @abstractmethod
+    def __str__(self):
+        pass
 
-ops = {
-    "+": lambda a, b: a or b,
-    "*": lambda a, b: a and b
-}
-
-def eval_circuit(circuit, inputs):
-    if isinstance(circuit, str):
-        return inputs[circuit]
-
-    operands = []
-    for operand in circuit["operands"]:
-        operands.append(eval_circuit(operand, inputs))
-
-    result = operands[0]
-    for i in range(1, len(operands)):
-        result = ops[circuit["op"]](result, operands[i])
-    return result
+    @abstractmethod
+    def eval(self):
+        pass
 
 
-def expression(circuit):
-    if isinstance(circuit, str):
-        return circuit
+class Input(Node):
+    def __init__(self, name, value):
+        super().__init__([])
+        self.name = name
+        self.value = value
 
-    result = "(" + expression(circuit["operands"][0])
-    for i in range(1, len(circuit["operands"])):
-        result += " " + circuit["op"] + " " + expression(circuit["operands"][i])
-    result += ")"
-    return result
+    def __str__(self):
+        return self.name
 
-
-def truth_table(circuit, inputs):
-    inputs = {(i, False) for i in inputs}
-    for i in range(2 ** len(inputs)):
-        for j in range(len(inputs)):
-            if inputs[len(inputs) - 1 - j] == True:
-                inputs[len(inputs) - 1 - j] = False
-            else:
-                inputs[len(inputs) - 1 - j] = True
-                break
-
-        print()
-        print(inputs)
-        print(eval_circuit(circuit, inputs))
+    def eval(self):
+        return self.value
 
 
+class AndGate(Node):
+    def __init__(self, children):
+        super().__init__(children)
+
+    def __str__(self):
+        return f"{''.join([str(child) for child in self.children])}"
+
+    def eval(self):
+        value = True
+        for child in self.children:
+            value = value and child.eval()
+        return value
+
+
+class OrGate(Node):
+    def __init__(self, children):
+        super().__init__(children)
+
+    def __str__(self):
+        return f"({' + '.join([str(child) for child in self.children])})"
+
+    def eval(self):
+        value = False
+        for child in self.children:
+            value = value or child.eval()
+        return value
+
+
+def print_truth_table(circuit):
+    # TODO
+    pass
+    
 
 def simplify(circuit):
-    raise NotImplementedError
+    # TODO
+    pass
 
-print(eval_circuit(circuit, {"a": True, "b": False, "c": True}))
-print(expression(circuit))
-truth_table(circuit, [ "a", "b", "c" ])
+
+# terrible testing
+# ab + bc(b + c)
+a = Input("a", False)
+b = Input("b", False)
+c = Input("c", False)
+ab = AndGate([ a, b ])
+o = OrGate([ b, c ])
+bc = AndGate([ b, c, o ])
+o2 = OrGate([ ab, bc ])
+print(o2)
