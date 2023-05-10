@@ -12,6 +12,15 @@ class Node(ABC):
     def eval(self):
         pass
 
+    def inputs(self):
+        inputs = set()
+        for child in self.children:
+            if isinstance(child, Input):
+                inputs.add(child)
+            else:
+                inputs = inputs.union(child.inputs())
+        return inputs
+
 
 class Input(Node):
     def __init__(self, name, value):
@@ -52,16 +61,6 @@ class OrGate(Node):
         for child in self.children:
             value = value or child.eval()
         return value
-
-
-def print_truth_table(circuit):
-    # TODO
-    pass
-    
-
-def simplify(circuit):
-    # TODO
-    pass
 
 
 # terrible testing
