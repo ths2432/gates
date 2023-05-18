@@ -150,15 +150,38 @@ RULES = [
     Rule(Not(Or(Var("a"), Var("b"))), And(Not(Var("a")), Not(Var("b")))),
     Rule(Not(And(Var("a"), Var("b"))), Or(Not(Var("a")), Not(Var("b")))),
 
-    # Simplification
-    # a * a = a
     # a + a = a
-    Rule(And(Var("a"), Var("a")), Var("a")),
+    # a * a = a
     Rule(Or(Var("a"), Var("a")), Var("a")),
-    # a * !a = False
+    Rule(And(Var("a"), Var("a")), Var("a")),
+
+    # a + 0 = a
+    # a + 1 = 1
+    # a * 0 = 0
+    # a * 1 = a
+    Rule(Or(Var("a"), Const(False)), Var("a")),
+    Rule(Or(Var("a"), Const(True)), Const(True)),
+    Rule(And(Var("a"), Const(False)), Const(False)),
+    Rule(And(Var("a"), Const(True)), Var("a")),
+
     # a + !a = True
-    Rule(And(Var("a"), Not(Var("a"))), False),
-    Rule(Or(Var("a"), Not(Var("a"))), True)
+    # a * !a = False
+    Rule(Or(Var("a"), Not(Var("a"))), Const(True)),
+    Rule(And(Var("a"), Not(Var("a"))), Const(False)),
+
+    # a + (a * b) = a
+    # a + (!a * b) = a + b
+    # !a + (a * b) = !a + b
+    Rule(Or(Var("a"), And(Var("a"), Var("b"))), Var("a")),
+    Rule(Or(Var("a"), And(Not(Var("a")), Var("b"))), Or(Var("a"), Var("b"))),
+    Rule(Or(Not(Var("a")), And(Var("a"), Var("b"))), Or(Not(Var("a")), Var("b"))),
+
+    # !!a = a
+    # !0 = 1
+    # !1 = 0
+    Rule(Not(Not(Var("a"))), Var("a")),
+    Rule(Not(Const(False)), Const(True)),
+    Rule(Not(Const(True)), Const(False))
 ]
 
 expr = Or(And(Var("a"), Var("b")), And(And(Var("b"), Var("c")), Or(Var("b"), Var("c"))))
