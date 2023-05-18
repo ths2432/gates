@@ -44,9 +44,13 @@ class Node:
         result = deepcopy(self)
         for i in range(len(result.children)):
             if isinstance(result.children[i], Var):
+                if result.children[i].name not in variables:
+                    return None
                 result.children[i] = variables[result.children[i].name]
             else:
                 result.children[i] = result.children[i].substitute(variables)
+                if result.children[i] is None:
+                    return None
         return result
 
     def neighbors(self):
@@ -57,7 +61,7 @@ class Node:
                 variables = self.match(variant.left, {})
                 if variables is not None:
                     neighbor = variant.right.substitute(variables)
-                    if neighbor not in neighbors:
+                    if neighbor is not None and neighbor not in neighbors:
                         neighbors.append(neighbor)
 
         for i in range(len(self.children)):
