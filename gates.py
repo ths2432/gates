@@ -69,6 +69,17 @@ class Node:
 
         return neighbors
 
+class Const(Node):
+    def __init__(self, value):
+        super().__init__([])
+        self.value = value
+
+    def __eq__(self, other):
+        return super().__eq__(other) and other.value == self.value
+
+    def __str__(self):
+        return str(int(self.value))
+
 class Var(Node):
     def __init__(self, name):
         super().__init__([])
