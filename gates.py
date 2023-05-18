@@ -137,7 +137,17 @@ RULES = [
     # !(a + b) = !a * !b
     # !(a * b) = !a + !b
     Rule(Not(Or(Var("a"), Var("b"))), And(Not(Var("a")), Not(Var("b")))),
-    Rule(Not(And(Var("a"), Var("b"))), Or(Not(Var("a")), Not(Var("b"))))
+    Rule(Not(And(Var("a"), Var("b"))), Or(Not(Var("a")), Not(Var("b")))),
+
+    # Simplification
+    # a * a = a
+    # a + a = a
+    Rule(And(Var("a"), Var("a")), Var("a")),
+    Rule(Or(Var("a"), Var("a")), Var("a")),
+    # a * !a = False
+    # a + !a = True
+    Rule(And(Var("a"), Not(Var("a"))), False),
+    Rule(Or(Var("a"), Not(Var("a"))), True)
 ]
 
 expr = Or(And(Var("a"), Var("b")), And(And(Var("b"), Var("c")), Or(Var("b"), Var("c"))))
