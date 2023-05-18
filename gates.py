@@ -1,5 +1,7 @@
 from abc import ABC, abstractmethod
 from copy import deepcopy
+import math
+import random
 from pprint import pprint
 
 class Node:
@@ -31,6 +33,9 @@ class Node:
         if not isinstance(self, type(form)):
             return None
 
+        if isinstance(self, Const) and self.value != form.value:
+            return None
+
         if len(self.children) != len(form.children):
             return None
 
@@ -41,16 +46,17 @@ class Node:
         return variables
 
     def substitute(self, variables):
+        if isinstance(self, Var):
+            if self.name not in variables:
+                return None
+            return variables[self.name]
+
         result = deepcopy(self)
         for i in range(len(result.children)):
-            if isinstance(result.children[i], Var):
-                if result.children[i].name not in variables:
-                    return None
-                result.children[i] = variables[result.children[i].name]
-            else:
-                result.children[i] = result.children[i].substitute(variables)
-                if result.children[i] is None:
-                    return None
+            result.children[i] = result.children[i].substitute(variables)
+            if result.children[i] is None:
+                return None
+
         return result
 
     def neighbors(self):
@@ -119,11 +125,12 @@ class And(Binary):
         super().__init__("*", left, right)
 
 class Rule:
-    def __init__(self, left, right, inverse=None):
+    def __init__(self, left, right, include_inverse=False):
         self.left = left
         self.right = right
-        self.inverse = inverse or Rule(right, left, self)
-        self.variants = [ self, self.inverse ]
+        self.variants = [ self ]
+        if include_inverse:
+            self.variants.append(Rule(right, left))
 
     def __str__(self):
         return f"{self.left} = {self.right}"
@@ -135,24 +142,24 @@ RULES = [
     # Commutative properties
     # a + b = b + a
     # a * b = b * a
-    Rule(Or(Var("a"), Var("b")), Or(Var("b"), Var("a"))),
-    Rule(And(Var("a"), Var("b")), And(Var("b"), Var("a"))),
+    Rule(Or(Var("a"), Var("b")), Or(Var("b"), Var("a")), True),
+    Rule(And(Var("a"), Var("b")), And(Var("b"), Var("a")), True),
 
     # Associative properties
     # a + (b + c) = (a + b) + c
     # a * (b * c) = (a * b) * c
-    Rule(Or(Var("a"), Or(Var("b"), Var("c"))), Or(Or(Var("a"), Var("b")), Var("c"))),
-    Rule(And(Var("a"), And(Var("b"), Var("c"))), And(And(Var("a"), Var("b")), Var("c"))),
+    Rule(Or(Var("a"), Or(Var("b"), Var("c"))), Or(Or(Var("a"), Var("b")), Var("c")), True),
+    Rule(And(Var("a"), And(Var("b"), Var("c"))), And(And(Var("a"), Var("b")), Var("c")), True),
 
     # Distributive property
     # a * (b + c) = (a * b) + (a * c)
-    Rule(And(Var("a"), Or(Var("b"), Var("c"))), Or(And(Var("a"), Var("b")), And(Var("a"), Var("c")))),
+    Rule(And(Var("a"), Or(Var("b"), Var("c"))), Or(And(Var("a"), Var("b")), And(Var("a"), Var("c"))), True),
 
     # De Morgan's laws
     # !(a + b) = !a * !b
     # !(a * b) = !a + !b
-    Rule(Not(Or(Var("a"), Var("b"))), And(Not(Var("a")), Not(Var("b")))),
-    Rule(Not(And(Var("a"), Var("b"))), Or(Not(Var("a")), Not(Var("b")))),
+    Rule(Not(Or(Var("a"), Var("b"))), And(Not(Var("a")), Not(Var("b"))), True),
+    Rule(Not(And(Var("a"), Var("b"))), Or(Not(Var("a")), Not(Var("b"))), True),
 
     # a + a = a
     # a * a = a
@@ -168,8 +175,8 @@ RULES = [
     Rule(And(Var("a"), Const(False)), Const(False)),
     Rule(And(Var("a"), Const(True)), Var("a")),
 
-    # a + !a = True
-    # a * !a = False
+    # a + !a = 1
+    # a * !a = 0
     Rule(Or(Var("a"), Not(Var("a"))), Const(True)),
     Rule(And(Var("a"), Not(Var("a"))), Const(False)),
 
@@ -188,6 +195,22 @@ RULES = [
     Rule(Not(Const(True)), Const(False))
 ]
 
+def cost(expr):
+    c = 1
+    for child in expr.children:
+        c += cost(child)
+    return c
+
 expr = Or(And(Var("a"), Var("b")), And(And(Var("b"), Var("c")), Or(Var("b"), Var("c"))))
-print(expr)
-pprint(expr.neighbors())
+iterations = 10000
+for t in range(iterations):
+    neighbors = expr.neighbors()
+    neighbor = random.choice(neighbors)
+    diff = cost(neighbor) - cost(expr)
+    old = expr
+    if diff < 0:
+        expr = neighbor
+    if random.random() < 0.01:
+        expr = neighbor
+    if expr != old:
+        print(expr)
