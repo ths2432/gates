@@ -1,5 +1,6 @@
 from abc import ABC, abstractmethod
 from copy import deepcopy
+from pprint import pprint
 
 class Term(ABC):
     def __init__(self, children):
@@ -19,6 +20,38 @@ class Term(ABC):
     def __repr__(self):
         return str(self)
 
+    @abstractmethod
+    def eval(self, variables):
+        pass
+
+    def inputs(self):
+        inputs = set()
+        for child in self.children:
+            inputs = inputs | child.inputs()
+        return inputs
+
+    def equivalent(self, other):
+        def permute(n):
+            array = []
+            permutations = 2 ** n - 1
+            while (permutations >= 0):
+                binary = str(bin(permutations))[2:]
+                while (len(binary) < n):
+                    binary = "0" + binary
+                array.append([bool(int(a)) for a in binary])
+                permutations = permutations - 1
+            return array
+
+        inputs = list(self.inputs() | other.inputs())
+        permutations = permute(len(inputs))
+        for permutation in permutations:
+            variables = {}
+            for i in range(len(inputs)):
+                variables[inputs[i].name] = permutation[i]
+            if self.eval(variables) != other.eval(variables):
+                return False
+        return True
+
     def match(self, redex, variables):
         if not isinstance(redex, type(self)):
             return False
@@ -32,12 +65,6 @@ class Term(ABC):
         for i in range(len(result.children)):
             result.children[i] = result.children[i].substitute(variables)
         return result
-
-    def cost(self):
-        c = 1
-        for child in self.children:
-            c += child.cost()
-        return c
 
     def neighbors(self):
         neighbors = set()
@@ -58,24 +85,32 @@ class Term(ABC):
 
         return neighbors
 
+    def cost(self):
+        c = 1
+        for child in self.children:
+            c += child.cost()
+        return c
+
     def simplify(self):
         state = deepcopy(self)
         for i in range(len(state.children)):
             state.children[i] = state.children[i].simplify()
+
         frontier = {state}
+        best = state
         explored = set()
-        best = self
         while len(frontier) > 0:
             state = frontier.pop()
             explored.add(state)
 
-            if state.cost() < best.cost():
-                best = state
-                frontier.clear()
-
             for neighbor in state.neighbors():
                 if neighbor not in explored:
-                    frontier.add(neighbor)
+                    if neighbor.cost() < best.cost():
+                        frontier = {neighbor}
+                        best = neighbor
+                        break
+                    else:
+                        frontier.add(neighbor)
 
         return best
 
@@ -94,6 +129,9 @@ class Constant(Term):
     def __str__(self):
         return str(int(self.value))
 
+    def eval(self, variables):
+        return self.value
+
     def match(self, redex, variables):
         return redex == self
 
@@ -111,6 +149,12 @@ class Variable(Term):
 
     def __str__(self):
         return self.name
+
+    def eval(self, variables):
+        return variables[self.name]
+
+    def inputs(self):
+        return {self}
 
     def match(self, redex, variables):
         if self.name in variables:
@@ -134,7 +178,10 @@ class Not(Term):
         return hash(self.children[0])
 
     def __str__(self):
-        return f"!{self.child}"
+        return f"!{self.children[0]}"
+
+    def eval(self, variables):
+        return not self.children[0].eval(variables)
 
 
 class Binary(Term):
@@ -153,10 +200,18 @@ class Or(Binary):
     def __init__(self, left, right):
         super().__init__(left, right, "+")
 
+    def eval(self, variables):
+        return (self.children[0].eval(variables) or
+                self.children[1].eval(variables))
+
 
 class And(Binary):
     def __init__(self, left, right):
         super().__init__(left, right, "*")
+
+    def eval(self, variables):
+        return (self.children[0].eval(variables) and
+                self.children[1].eval(variables))
 
 
 RULES = {
@@ -228,10 +283,3 @@ RULES = {
     (Not(Constant(False)), Constant(True)),
     (Not(Constant(True)), Constant(False)),
     }
-
-expr = Or(And(Variable("a"), Variable("b")),
-          And(And(Variable("b"), Variable("c")),
-              Or(Variable("b"), Variable("c"))))
-
-print(expr)
-print(expr.simplify())
