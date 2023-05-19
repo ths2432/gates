@@ -39,10 +39,10 @@ class Term(ABC):
             c += child.cost()
         return c
 
-    def neighbors(self, rules):
+    def neighbors(self):
         neighbors = set()
 
-        for rule in rules:
+        for rule in RULES:
             variables = {}
             if rule[0].match(self, variables):
                 neighbor = rule[1].substitute(variables)
@@ -50,7 +50,7 @@ class Term(ABC):
                     neighbors.add(neighbor)
 
         for i in range(len(self.children)):
-            for child_neighbor in self.children[i].neighbors(rules):
+            for child_neighbor in self.children[i].neighbors():
                 neighbor = deepcopy(self)
                 neighbor.children[i] = child_neighbor
                 if neighbor not in neighbors:
@@ -58,7 +58,7 @@ class Term(ABC):
 
         return neighbors
 
-    def rewrite(self, rules):
+    def simplify(self):
         frontier = {self}
         explored = set()
         best = self
@@ -69,15 +69,11 @@ class Term(ABC):
             if state.cost() < best.cost():
                 best = state
 
-            for neighbor in state.neighbors(rules):
+            for neighbor in state.neighbors():
                 if neighbor not in explored:
                     frontier.add(neighbor)
 
         return best
-
-    def simplify(self):
-        return self.rewrite(REARRANGEMENT_RULES | EXPANSION_RULES |
-                            SIMPLIFICATION_RULES)
 
 
 class Constant(Term):
@@ -159,7 +155,7 @@ class And(Binary):
         super().__init__(left, right, "*")
 
 
-REARRANGEMENT_RULES = {
+RULES = {
     # Commutative properties
     # a + b = b + a
     # a * b = b * a
@@ -177,13 +173,13 @@ REARRANGEMENT_RULES = {
      And(And(Variable("a"), Variable("b")), Variable("c"))),
     (And(And(Variable("a"), Variable("b")), Variable("c")),
      And(Variable("a"), And(Variable("b"), Variable("c")))),
-    }
 
-EXPANSION_RULES = {
     # Distributive property
     # a * (b + c) = (a * b) + (a * c)
     (And(Variable("a"), Or(Variable("b"), Variable("c"))),
      Or(And(Variable("a"), Variable("b")), And(Variable("a"), Variable("c")))),
+    (Or(And(Variable("a"), Variable("b")), And(Variable("a"), Variable("c"))),
+     And(Variable("a"), Or(Variable("b"), Variable("c")))),
 
     # De Morgan's laws
     # !(a + b) = !a * !b
@@ -192,13 +188,6 @@ EXPANSION_RULES = {
      And(Not(Variable("a")), Not(Variable("b")))),
     (Not(And(Variable("a"), Variable("b"))),
      Or(Not(Variable("a")), Not(Variable("b")))),
-    }
-
-SIMPLIFICATION_RULES = {
-    # Inverse distributive property
-    # (a * b) + (a * c) = a * (b + c)
-    (Or(And(Variable("a"), Variable("b")), And(Variable("a"), Variable("c"))),
-     And(Variable("a"), Or(Variable("b"), Variable("c")))),
 
     # a + a = a
     # a * a = a
@@ -240,4 +229,5 @@ expr = Or(And(Variable("a"), Variable("b")),
           And(And(Variable("b"), Variable("c")),
               Or(Variable("b"), Variable("c"))))
 
+print(expr)
 print(expr.simplify())
