@@ -59,7 +59,10 @@ class Term(ABC):
         return neighbors
 
     def simplify(self):
-        frontier = {self}
+        state = deepcopy(self)
+        for i in range(len(state.children)):
+            state.children[i] = state.children[i].simplify()
+        frontier = {state}
         explored = set()
         best = self
         while len(frontier) > 0:
