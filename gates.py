@@ -27,49 +27,57 @@ class Term(ABC):
                 return False
         return True
 
-    def apply(self, rule):
-        variables = {}
-        if rule[0].match(self, variables):
-            return rule[1].substitute(variables)
-
-        result = deepcopy(self)
-        for i in range(len(result.children)):
-            applied = result.children[i].apply(rule)
-            if applied is not None:
-                result.children[i] = applied
-                return result
-
-        return None
-
     def substitute(self, variables):
         result = deepcopy(self)
         for i in range(len(result.children)):
             result.children[i] = result.children[i].substitute(variables)
         return result
 
-    def rewrite(self, primary_rules, secondary_rules):
-        state = self
+    def cost(self):
+        c = 1
+        for child in self.children:
+            c += child.cost()
+        return c
+
+    def neighbors(self, rules):
+        neighbors = set()
+
+        for rule in rules:
+            variables = {}
+            if rule[0].match(self, variables):
+                neighbor = rule[1].substitute(variables)
+                if neighbor is not None and neighbor not in neighbors:
+                    neighbors.add(neighbor)
+
+        for i in range(len(self.children)):
+            for child_neighbor in self.children[i].neighbors(rules):
+                neighbor = deepcopy(self)
+                neighbor.children[i] = child_neighbor
+                if neighbor not in neighbors:
+                    neighbors.add(neighbor)
+
+        return neighbors
+
+    def rewrite(self, rules):
+        frontier = {self}
         explored = set()
-        print(state)
-        while True:
-            applied = False
-            for rules in [primary_rules, secondary_rules]:
-                for rule in rules:
-                    result = state.apply(rule)
-                    if result is not None and result not in explored:
-                        state = result
-                        explored.add(state)
-                        applied = True
-                        break
-                if applied:
-                    break
-            if not applied:
-                break
-        return state
+        best = self
+        while len(frontier) > 0:
+            state = frontier.pop()
+            explored.add(state)
+
+            if state.cost() < best.cost():
+                best = state
+
+            for neighbor in state.neighbors(rules):
+                if neighbor not in explored:
+                    frontier.add(neighbor)
+
+        return best
 
     def simplify(self):
-        result = self.rewrite(EXPANSION_RULES, REARRANGEMENT_RULES)
-        return result.rewrite(SIMPLIFICATION_RULES, REARRANGEMENT_RULES)
+        return self.rewrite(REARRANGEMENT_RULES | EXPANSION_RULES |
+                            SIMPLIFICATION_RULES)
 
 
 class Constant(Term):
