@@ -71,6 +71,7 @@ class Term(ABC):
 
             if state.cost() < best.cost():
                 best = state
+                frontier.clear()
 
             for neighbor in state.neighbors():
                 if neighbor not in explored:
