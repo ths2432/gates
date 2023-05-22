@@ -48,10 +48,32 @@ def simplify2():
 def simplify3():
     """tests the simplification of an expression"""
     g = check50.py.import_("gates.py")
-    expr = g.Or(g.And(Variable("a"), Variable("b")),
-          g.And(g.And(Variable("b"), Variable("c")), g.Or(Variable("b"), Variable("c"))))
+    expr = g.Or(g.And(g.Variable("a"), g.Variable("b")),
+          g.And(g.And(g.Variable("b"), g.Variable("c")), g.Or(g.Variable("b"), g.Variable("c"))))
     simplified = expr.simplify()
     if not simplified.equivalent(expr):
         raise check50.Failure()
     if simplified.cost() > 5:
+        raise check50.Failure()
+
+@check50.check(exists)
+def simplify4():
+    """tests the simplification of an expression"""
+    g = check50.py.import_("gates.py")
+    expr = g.Not(g.And(g.And(g.Not(g.Variable("a")), g.Variable("b")), g.Not(g.Variable("c"))))
+    simplified = expr.simplify()
+    if not simplified.equivalent(expr):
+        raise check50.Failure()
+    if simplified.cost() > 6:
+        raise check50.Failure()
+
+@check50.check(exists)
+def simplify5():
+    """tests the simplification of an expression"""
+    g = check50.py.import_("gates.py")
+    expr = g.Not(g.And(g.Not(g.And(g.Variable("a"), g.Variable("b"))), g.And(g.Not(g.Variable("c")), g.Variable("d"))))
+    simplified = expr.simplify()
+    if not simplified.equivalent(expr):
+        raise check50.Failure()
+    if simplified.cost() > 8:
         raise check50.Failure()

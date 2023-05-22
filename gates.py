@@ -284,8 +284,6 @@ RULES = {
     (Not(Constant(True)), Constant(False)),
     }
 
-expr = Or(And(Variable("a"), Variable("b")),
-          And(And(Variable("b"), Variable("c")),
-              Or(Variable("b"), Variable("c"))))
+expr = Not(And(Not(And(Variable("a"), Variable("b"))),And(Not(Variable("c")), Variable("d"))))
 simplified = expr.simplify()
 print(simplified)
