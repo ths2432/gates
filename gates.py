@@ -283,7 +283,3 @@ RULES = {
     (Not(Constant(False)), Constant(True)),
     (Not(Constant(True)), Constant(False)),
     }
-
-expr = Not(And(Not(And(Variable("a"), Variable("b"))),And(Not(Variable("c")), Variable("d"))))
-simplified = expr.simplify()
-print(simplified)
